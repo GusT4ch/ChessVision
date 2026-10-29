@@ -1,5 +1,5 @@
 // ChessVision service worker — cache-first offline shell, including the engine.
-const CACHE = 'chessvision-v2';
+const CACHE = 'chessvision-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -36,6 +36,17 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const { request } = e;
   if (request.method !== 'GET') return;
+  // App files: network-first so updates show up immediately; cache is the offline fallback.
+  if (!request.url.includes('/engine/')) {
+    e.respondWith(
+      fetch(request).then((resp) => {
+        if (resp.ok) { const copy = resp.clone(); caches.open(CACHE).then((c) => c.put(request, copy)); }
+        return resp;
+      }).catch(() => caches.match(request))
+    );
+    return;
+  }
+  // Engine files (large, never change): cache-first.
   e.respondWith(
     caches.match(request).then((hit) => {
       if (hit) return hit;
