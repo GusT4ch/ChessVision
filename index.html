@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <title>ChessVision</title>
+  <meta name="description" content="Tabuleiro de análise com Stockfish: mova as peças e veja a seta do melhor lance." />
+  <meta name="theme-color" content="#1f2430" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ChessVision" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Chess<span>Vision</span></h1>
+    <div class="engine-pill"><span id="spinner" class="spinner"></span><span id="enginestate">Carregando motor…</span></div>
+  </header>
+
+  <main>
+    <div class="board-wrap">
+      <div class="evalbar" aria-hidden="true">
+        <div class="evalfill" id="evalfill"></div>
+        <span class="evallabel" id="evallabel"></span>
+      </div>
+      <div id="board"></div>
+    </div>
+
+    <p class="status" id="status"></p>
+    <p class="bestline" id="bestline"></p>
+
+    <div class="controls">
+      <button id="btn-new" class="btn">Nova</button>
+      <button id="btn-undo" class="btn">Voltar</button>
+      <button id="btn-flip" class="btn">Girar</button>
+      <button id="btn-hint" class="btn primary">Melhor lance</button>
+    </div>
+
+    <div class="controls secondary">
+      <button id="btn-loadfen" class="btn ghost">Carregar FEN</button>
+      <button id="btn-copyfen" class="btn ghost">Copiar FEN</button>
+    </div>
+
+    <div class="options">
+      <label class="opt">
+        <input type="checkbox" id="auto" checked />
+        Seta automática a cada lance
+      </label>
+      <label class="opt range">
+        Profundidade: <strong id="depthval">14</strong>
+        <input type="range" id="depth" min="6" max="22" value="14" />
+      </label>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
