@@ -1,5 +1,5 @@
 // ChessVision service worker — cache-first offline shell, including the engine.
-const CACHE = 'chessvision-v1';
+const CACHE = 'chessvision-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const ASSETS = [
   './engine/stockfish-nnue-16-single.wasm',
   './engine/nn-5af11540bbfe.nnue',
   './icons/icon-192.png',
+  ...['w','b'].flatMap((c) => ['P','N','B','R','Q','K'].map((p) => './pieces/' + c + p + '.svg')),
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
   './icons/maskable-512.png',
