@@ -4,10 +4,10 @@
   --panel-2: #262c3a;
   --text: #e8ebf2;
   --muted: #9aa3b4;
-  --light: #e9edcc;
-  --dark: #7a9b5e;
-  --sel: rgba(255, 221, 92, .55);
-  --last: rgba(255, 221, 92, .28);
+  --light: #eeeed2;
+  --dark: #769656;
+  --sel: rgba(255, 190, 40, .75);
+  --last: rgba(255, 190, 40, .6);
   --target: rgba(20, 30, 20, .32);
   --accent: #ffcb3d;
   --arrow: rgba(255, 160, 32, .82);
@@ -115,9 +115,7 @@ body {
   cursor: grab; user-select: none;
   will-change: transform;
 }
-#board { font-size: min(11vw, 58px); }
-.cv-piece.w { color: var(--white-piece); -webkit-text-stroke: 1.4px #2a2f38; text-stroke: 1.4px #2a2f38; }
-.cv-piece.b { color: var(--black-piece); -webkit-text-stroke: 1.2px #cfd6e4; text-stroke: 1.2px #cfd6e4; }
+.cv-piece { background: center / 92% no-repeat; }
 .cv-piece.dragging { z-index: 5; cursor: grabbing; }
 
 .cv-overlay {

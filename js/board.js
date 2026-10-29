@@ -1,6 +1,5 @@
 // Board rendering, interaction (tap-to-move + drag) and the SVG arrow overlay.
 
-const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 export class BoardView {
@@ -95,7 +94,7 @@ export class BoardView {
         const name = FILES[f] + (8 - r);
         const el = document.createElement('div');
         el.className = 'cv-piece ' + cell.color;
-        el.textContent = GLYPH[cell.type];
+        el.style.backgroundImage = `url(pieces/${cell.color}${cell.type.toUpperCase()}.svg)`;
         this.squares[name].appendChild(el);
       }
     }
