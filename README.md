@@ -55,4 +55,6 @@ icons/                  ícones do app
 - Motor: [Stockfish](https://stockfishchess.org/) via
   [stockfish.js](https://github.com/nmrugg/stockfish.js) — **GPLv3**
   (ver `engine/STOCKFISH-LICENSE.txt`).
+- Peças: conjunto **Staunty**, por sadsnake1 (via [Lichess](https://github.com/lichess-org/lila)) —
+  [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) (uso não comercial).
 - Regras: [chess.js](https://github.com/jhlywa/chess.js) — BSD-2-Clause.
