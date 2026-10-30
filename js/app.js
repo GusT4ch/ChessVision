@@ -20,6 +20,31 @@ let autoArrow = true;
 function refresh(lastMove) {
   board.setPosition(game.board(), lastMove);
   updateStatus();
+  renderMoves();
+}
+
+// English SAN -> Portuguese piece letters (N=C, Q=D, R=T, K=R; B stays B).
+const PT = { N: 'C', Q: 'D', R: 'T', K: 'R' };
+const pt = (san) => san.replace(/[NQRK]/g, (c) => PT[c]);
+
+function renderMoves() {
+  const box = $('moves');
+  const h = game.history();
+  if (!h.length) { box.innerHTML = '<span class="empty">Nenhum lance ainda</span>'; return; }
+  let html = '';
+  h.forEach((san, i) => {
+    if (i % 2 === 0) html += `<span class="num">${i / 2 + 1}.</span>`;
+    html += `<span class="mv${i === h.length - 1 ? ' cur' : ''}">${pt(san)}</span>`;
+  });
+  box.innerHTML = html;
+  box.scrollLeft = box.scrollWidth;
+}
+
+function clearAnalysis(msg) {
+  setEval(null);
+  $('bestmove').textContent = '\u2014';
+  $('bestline').textContent = msg || '';
+  $('evaldepth').textContent = '';
 }
 
 function updateStatus() {
@@ -56,8 +81,7 @@ function tryMove(from, to) {
 let analyzing = false;
 async function analyze() {
   if (game.isGameOver()) {
-    setEval(null);
-    $('bestline').textContent = '';
+    clearAnalysis('Fim de jogo');
     return;
   }
   analyzing = true;
@@ -70,6 +94,7 @@ async function analyze() {
     if (autoArrow && info.bestSoFar) drawMoveArrow(info.bestSoFar);
   });
 
+  if (!res) return; // superseded by a newer analysis
   analyzing = false;
   setThinking(false);
   if (game.fen() !== fen) return; // position changed meanwhile
@@ -92,35 +117,37 @@ function renderEval(info, turn) {
   let mate = info.mate;
   // Scores are from side-to-move perspective; convert to White's perspective.
   const sign = turn === 'w' ? 1 : -1;
-  if (mate != null) {
-    setEval({ mate: mate * sign });
-    $('bestline').textContent = pvToSan(info.pv);
-  } else if (cp != null) {
-    setEval({ cp: cp * sign });
-    $('bestline').textContent = pvToSan(info.pv);
-  }
+  if (mate != null) setEval({ mate: mate * sign });
+  else if (cp != null) setEval({ cp: cp * sign });
+  else return;
+  const sans = pvToSan(info.pv);
+  $('bestmove').textContent = sans[0] || '\u2014';
+  $('bestline').textContent = sans.slice(1).join(' ');
+  $('evaldepth').textContent = info.depth ? 'prof. ' + info.depth : '';
 }
 
 function pvToSan(pv) {
-  if (!pv || !pv.length) return '';
+  if (!pv || !pv.length) return [];
   const tmp = new Chess(game.fen());
   const sans = [];
   for (const uci of pv.slice(0, 8)) {
-    const mv = tmp.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci.slice(4, 5) || undefined });
+    let mv = null;
+    try { mv = tmp.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci.slice(4, 5) || undefined }); }
+    catch { break; }
     if (!mv) break;
-    sans.push(mv.san);
+    sans.push(pt(mv.san));
   }
-  return sans.join(' ');
+  return sans;
 }
 
 function setEval(score) {
   const bar = $('evalfill');
-  const label = $('evallabel');
-  if (!score) { bar.style.height = '50%'; label.textContent = ''; return; }
+  const label = $('evalscore');
+  if (!score) { bar.style.height = '50%'; label.textContent = '0.0'; label.classList.remove('neg'); return; }
   if (score.mate != null) {
     const whiteWinning = score.mate > 0;
     bar.style.height = whiteWinning ? '100%' : '0%';
-    label.textContent = 'M' + Math.abs(score.mate);
+    label.textContent = (whiteWinning ? '' : '-') + 'M' + Math.abs(score.mate);
     label.classList.toggle('neg', !whiteWinning);
     return;
   }
@@ -154,8 +181,7 @@ $('btn-new').addEventListener('click', () => {
   game.reset();
   board.setArrow(null, null);
   refresh(null);
-  setEval(null);
-  $('bestline').textContent = '';
+  clearAnalysis('Mova uma pe\u00e7a para analisar');
 });
 
 $('btn-hint').addEventListener('click', () => analyze());
@@ -200,6 +226,7 @@ function flash(msg) {
 refresh(null);
 engine.ready.then(() => {
   $('enginestate').textContent = 'Motor pronto';
+  $('enginestate').parentElement.classList.add('ready');
   engine.setSkill(20);
 });
 
