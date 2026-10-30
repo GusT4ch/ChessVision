@@ -14,6 +14,11 @@ export class Engine {
       for (const fn of this.listeners) fn(line);
     };
     this._token = 0;
+    // Every 'go' produces exactly one 'bestmove'. Counting both tells us which
+    // search an output line belongs to, even after several quick 'stop's.
+    this._goCount = 0;
+    this._bestCount = 0;
+    this.on((line) => { if (line.startsWith('bestmove')) this._bestCount++; });
     this.ready = this._handshake();
   }
 
@@ -48,12 +53,21 @@ export class Engine {
     await this.ready;
     const token = ++this._token;
     this.send('stop');
+    const myGo = ++this._goCount;
 
     return new Promise((resolve) => {
       let last = { depth: 0, scoreCp: null, mate: null, pv: [] };
 
       const onLine = (line) => {
-        if (token !== this._token) return; // superseded
+        const isBest = line.startsWith('bestmove');
+        if (token !== this._token) {
+          // superseded by a newer call
+          this.listeners = this.listeners.filter((f) => f !== onLine);
+          resolve(null);
+          return;
+        }
+        // Output from an older search that hasn't finished yet.
+        if (isBest ? this._bestCount < myGo : this._bestCount < myGo - 1) return;
 
         if (line.startsWith('info') && line.includes(' pv ')) {
           const info = parseInfo(line);
@@ -61,7 +75,7 @@ export class Engine {
             last = info;
             if (onInfo) onInfo({ ...info, bestSoFar: info.pv[0] || null });
           }
-        } else if (line.startsWith('bestmove')) {
+        } else if (isBest) {
           this.listeners = this.listeners.filter((f) => f !== onLine);
           const parts = line.split(/\s+/);
           const bestmove = parts[1] && parts[1] !== '(none)' ? parts[1] : null;

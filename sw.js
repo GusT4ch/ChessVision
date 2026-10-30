@@ -1,5 +1,5 @@
 // ChessVision service worker — cache-first offline shell, including the engine.
-const CACHE = 'chessvision-v3';
+const CACHE = 'chessvision-v4';
 const ASSETS = [
   './',
   './index.html',

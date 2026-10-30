@@ -63,6 +63,10 @@ export class BoardView {
         const name = FILES[files[ff]] + (ranks[rr] + 1);
         this.grid.appendChild(this.squares[name]);
         this._pos[name] = { col: ff, row: rr };
+        const sq = this.squares[name];
+        sq.querySelectorAll('.cv-coord').forEach((c) => c.remove());
+        if (ff === 0) sq.insertAdjacentHTML('beforeend', `<span class="cv-coord rank">${name[1]}</span>`);
+        if (rr === 7) sq.insertAdjacentHTML('beforeend', `<span class="cv-coord file">${name[0]}</span>`);
         this.order[i++] = name;
       }
     }
@@ -205,16 +209,20 @@ export class BoardView {
     const a = this._center(this.arrow.from);
     const b = this._center(this.arrow.to);
     // shorten so the head sits nicely inside the target square
+    // Draw the arrow as one filled polygon (shaft + head) for a clean look.
     const ang = Math.atan2(b.y - a.y, b.x - a.x);
-    const ax = a.x + Math.cos(ang) * 0.18;
-    const ay = a.y + Math.sin(ang) * 0.18;
-    const bx = b.x - Math.cos(ang) * 0.36;
-    const by = b.y - Math.sin(ang) * 0.36;
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    const len = Math.hypot(b.x - a.x, b.y - a.y) - 0.12;
+    const w = 0.09, hw = 0.24, hl = 0.36;
+    const pts = [
+      [0, -w], [len - hl, -w], [len - hl, -hw], [len, 0],
+      [len - hl, hw], [len - hl, w], [0, w],
+    ].map(([x, y]) => [
+      a.x + x * Math.cos(ang) - y * Math.sin(ang),
+      a.y + x * Math.sin(ang) + y * Math.cos(ang),
+    ].map((v) => v.toFixed(3)).join(','));
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
     line.setAttribute('class', 'cv-arrow');
-    line.setAttribute('x1', ax); line.setAttribute('y1', ay);
-    line.setAttribute('x2', bx); line.setAttribute('y2', by);
-    line.setAttribute('marker-end', 'url(#cv-arrowhead)');
+    line.setAttribute('points', pts.join(' '));
     this.svg.appendChild(line);
   }
 }

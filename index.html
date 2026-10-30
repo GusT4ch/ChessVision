@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
   <title>ChessVision</title>
   <meta name="description" content="Tabuleiro de análise com Stockfish: mova as peças e veja a seta do melhor lance." />
-  <meta name="theme-color" content="#1f2430" />
+  <meta name="theme-color" content="#16181d" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -19,41 +19,57 @@
     <div class="engine-pill"><span id="spinner" class="spinner"></span><span id="enginestate">Carregando motor…</span></div>
   </header>
 
-  <main>
-    <div class="board-wrap">
-      <div class="evalbar" aria-hidden="true">
-        <div class="evalfill" id="evalfill"></div>
-        <span class="evallabel" id="evallabel"></span>
-      </div>
-      <div id="board"></div>
+  <section class="evalcard">
+    <div class="evalscore" id="evalscore">0.0</div>
+    <div class="evalinfo">
+      <div class="evalbest">Melhor lance: <strong id="bestmove">—</strong></div>
+      <div class="bestline" id="bestline">Mova uma peça para analisar</div>
     </div>
+    <div class="evaldepth" id="evaldepth"></div>
+  </section>
 
-    <p class="status" id="status"></p>
-    <p class="bestline" id="bestline"></p>
-
-    <div class="controls">
-      <button id="btn-new" class="btn">Nova</button>
-      <button id="btn-undo" class="btn">Voltar</button>
-      <button id="btn-flip" class="btn">Girar</button>
-      <button id="btn-hint" class="btn primary">Melhor lance</button>
+  <div class="board-wrap">
+    <div class="evalbar" aria-hidden="true">
+      <div class="evalfill" id="evalfill"></div>
+      <span class="evallabel" id="evallabel"></span>
     </div>
+    <div id="board"></div>
+  </div>
 
-    <div class="controls secondary">
+  <p class="status" id="status"></p>
+
+  <div class="moves" id="moves"></div>
+
+  <nav class="toolbar">
+    <button id="btn-new" class="tool" aria-label="Nova partida">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Nova</span>
+    </button>
+    <button id="btn-undo" class="tool" aria-label="Voltar lance">
+      <svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg><span>Voltar</span>
+    </button>
+    <button id="btn-flip" class="tool" aria-label="Girar tabuleiro">
+      <svg viewBox="0 0 24 24"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></svg><span>Girar</span>
+    </button>
+    <button id="btn-hint" class="tool primary" aria-label="Melhor lance">
+      <svg viewBox="0 0 24 24"><path d="M5 19 19 5M19 5h-7M19 5v7"/></svg><span>Dica</span>
+    </button>
+  </nav>
+
+  <details class="settings">
+    <summary>Ajustes</summary>
+    <label class="opt">
+      <input type="checkbox" id="auto" checked />
+      Seta automática a cada lance
+    </label>
+    <label class="opt range">
+      <span>Profundidade <strong id="depthval">14</strong></span>
+      <input type="range" id="depth" min="6" max="22" value="14" />
+    </label>
+    <div class="fenrow">
       <button id="btn-loadfen" class="btn ghost">Carregar FEN</button>
       <button id="btn-copyfen" class="btn ghost">Copiar FEN</button>
     </div>
-
-    <div class="options">
-      <label class="opt">
-        <input type="checkbox" id="auto" checked />
-        Seta automática a cada lance
-      </label>
-      <label class="opt range">
-        Profundidade: <strong id="depthval">14</strong>
-        <input type="range" id="depth" min="6" max="22" value="14" />
-      </label>
-    </div>
-  </main>
+  </details>
 
   <div class="toast" id="toast"></div>
 
