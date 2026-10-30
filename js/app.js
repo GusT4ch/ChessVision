@@ -14,7 +14,7 @@ const board = new BoardView($('board'), {
   legalMovesFor: (sq) => game.moves({ square: sq, verbose: true }).map((m) => m.to),
 });
 
-let analysisDepth = 14;
+let thinkMs = 1000; // time budget per analysis; keeps phones responsive
 let autoArrow = true;
 
 function refresh(lastMove) {
@@ -89,7 +89,7 @@ async function analyze() {
   const fen = game.fen();
   const turn = game.turn();
 
-  const res = await engine.analyze(fen, { depth: analysisDepth }, (info) => {
+  const res = await engine.analyze(fen, { movetime: thinkMs }, (info) => {
     renderEval(info, turn);
     if (autoArrow && info.bestSoFar) drawMoveArrow(info.bestSoFar);
   });
@@ -187,8 +187,8 @@ $('btn-new').addEventListener('click', () => {
 $('btn-hint').addEventListener('click', () => analyze());
 
 $('depth').addEventListener('input', (e) => {
-  analysisDepth = parseInt(e.target.value, 10);
-  $('depthval').textContent = analysisDepth;
+  thinkMs = parseFloat(e.target.value) * 1000;
+  $('depthval').textContent = e.target.value + ' s';
 });
 
 $('auto').addEventListener('change', (e) => {
