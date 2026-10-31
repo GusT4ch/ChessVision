@@ -63,13 +63,13 @@ function updateStatus() {
   }
 }
 
-function tryMove(from, to) {
+function tryMove(from, to, promo) {
   // Auto-queen on promotion for simplicity.
   const moves = game.moves({ square: from, verbose: true });
   const m = moves.find((x) => x.to === to);
   if (!m) return false;
   const opts = { from, to };
-  if (m.promotion) opts.promotion = 'q';
+  if (m.promotion) opts.promotion = promo || 'q';
   const made = game.move(opts);
   if (!made) return false;
   board.setArrow(null, null);
@@ -82,7 +82,7 @@ let analyzing = false;
 async function analyze() {
   if (game.isGameOver()) {
     clearAnalysis('Fim de jogo');
-    return;
+    return null;
   }
   analyzing = true;
   setThinking(true);
@@ -94,16 +94,33 @@ async function analyze() {
     if (autoArrow && info.bestSoFar) drawMoveArrow(info.bestSoFar);
   });
 
-  if (!res) return; // superseded by a newer analysis
+  if (!res) return null; // superseded by a newer analysis
   analyzing = false;
   setThinking(false);
-  if (game.fen() !== fen) return; // position changed meanwhile
+  if (game.fen() !== fen) return null; // position changed meanwhile
   // keep the printed line consistent with the final best move / arrow
   if (res.bestmove && res.info.pv[0] !== res.bestmove) {
     res.info.pv = [res.bestmove, ...res.info.pv];
   }
   renderEval(res.info, turn);
   if (res.bestmove) drawMoveArrow(res.bestmove);
+  lastBest = { fen, uci: res.bestmove };
+  return res.bestmove;
+}
+
+// Best move for the current position, reusing the last finished analysis.
+let lastBest = null;
+let playing = false;
+async function playBest() {
+  if (playing || game.isGameOver()) return;
+  playing = true;
+  try {
+    const fen = game.fen();
+    const uci = (lastBest && lastBest.fen === fen) ? lastBest.uci : await analyze();
+    if (uci && game.fen() === fen) tryMove(uci.slice(0, 2), uci.slice(2, 4), uci[4]);
+  } finally {
+    playing = false;
+  }
 }
 
 function drawMoveArrow(uci) {
@@ -185,6 +202,7 @@ $('btn-new').addEventListener('click', () => {
 });
 
 $('btn-hint').addEventListener('click', () => analyze());
+$('btn-play').addEventListener('click', () => playBest());
 
 $('depth').addEventListener('input', (e) => {
   thinkMs = parseFloat(e.target.value) * 1000;
