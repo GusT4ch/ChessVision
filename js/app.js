@@ -21,25 +21,49 @@ let autoArrow = true;
 // the time; the rest of the time it plays a weaker candidate line instead.
 let accuracyMode = false;
 let accuracy = 70; // percent
-const MULTIPV = 5; // how many candidate lines to request from the engine
+const MULTIPV = 10; // how many candidate lines to request from the engine
+
+// Engine scores (cp, from side-to-move perspective) as a single number, with
+// mates mapped to very large values so they compare correctly.
+function scoreVal(c) {
+  if (c.mate != null) return c.mate > 0 ? 100000 - c.mate : -100000 - c.mate;
+  return c.scoreCp || 0;
+}
 
 // Pick a move from the engine's ranked candidates (best first) honouring the
-// accuracy setting. With probability `accuracy`% returns the best move; else a
-// weaker candidate, biased toward the stronger alternatives (fewer blunders).
+// accuracy setting. With probability `accuracy`% returns the best move; the
+// rest of the time it deliberately plays a weaker move. The lower the accuracy,
+// the larger the centipawn loss allowed — this is what actually drops the
+// "accuracy" that sites like chess.com/lichess report (they score how far each
+// move is from best, not merely whether it was THE best move).
 function chooseByAccuracy(candidates) {
   if (!candidates || !candidates.length) return null;
   if (candidates.length === 1) return candidates[0].uci;
   if (Math.random() * 100 < accuracy) return candidates[0].uci;
-  const alts = candidates.slice(1);
-  // Weights 1/1, 1/2, 1/3, … so the 2nd-best is likeliest among the mistakes.
-  const weights = alts.map((_, i) => 1 / (i + 1));
-  const total = weights.reduce((a, b) => a + b, 0);
+
+  const best = scoreVal(candidates[0]);
+  // How bad a move we allow when "missing", scaled by the accuracy setting.
+  // At 90% ~60cp, 70% ~180cp, 50% ~300cp, 30% ~420cp of allowed loss.
+  const maxLoss = Math.max(40, (100 - accuracy) * 6);
+  const minLoss = 15; // must be a real, noticeable mistake
+
+  const alts = candidates.slice(1).map((c) => ({ uci: c.uci, loss: best - scoreVal(c) }));
+  let pool = alts.filter((a) => a.loss >= minLoss && a.loss <= maxLoss);
+  // Fall back to whatever weaker moves exist if none land in the window.
+  if (!pool.length) pool = alts.filter((a) => a.loss >= minLoss);
+  if (!pool.length) pool = alts;
+  if (!pool.length) return candidates[0].uci;
+
+  // Bias toward the larger allowed losses so the mistake actually registers,
+  // while still occasionally picking a smaller one.
+  const weights = pool.map((a) => a.loss + 20);
+  const total = weights.reduce((x, y) => x + y, 0);
   let r = Math.random() * total;
-  for (let i = 0; i < alts.length; i++) {
+  for (let i = 0; i < pool.length; i++) {
     r -= weights[i];
-    if (r <= 0) return alts[i].uci;
+    if (r <= 0) return pool[i].uci;
   }
-  return alts[alts.length - 1].uci;
+  return pool[pool.length - 1].uci;
 }
 
 function refresh(lastMove) {
