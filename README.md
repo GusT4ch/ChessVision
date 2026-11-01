@@ -1,60 +1,64 @@
 # ChessVision
 
-Tabuleiro de análise de xadrez como **PWA** (app web instalável), com o motor
-**Stockfish 16** rodando direto no navegador via WebAssembly. Você move as peças
-e o Stockfish mostra uma **seta com o melhor lance**, além da avaliação da
-posição e da linha principal — tudo offline, sem servidor.
+A chess analysis board as a **PWA** (installable web app), with the
+**Stockfish 16** engine running right in the browser via WebAssembly. Move the
+pieces and Stockfish draws an **arrow for the best move**, along with the
+position evaluation and the principal line — all offline, no server needed.
 
-## Funciona assim
+**Live:** https://gust4ch.github.io/ChessVision/
 
-- Mova qualquer peça (toque-e-toque ou arrastar). Só lances legais são aceitos.
-- A cada lance, o motor calcula e desenha uma **seta** para o melhor lance.
-- Barra de avaliação + placar (ex.: `+0.8`, `M3`) e linha principal em notação SAN.
-- Botões: **Nova** partida, **Voltar** (desfazer), **Girar** tabuleiro,
-  **Melhor lance** (forçar análise), carregar/copiar **FEN**.
-- Profundidade de análise ajustável e seta automática ligável/desligável.
+## How it works
 
-## Rodar localmente
+- Move any piece (tap-tap or drag). Only legal moves are accepted.
+- After every move, the engine calculates and draws an **arrow** for the best move.
+- Evaluation bar and score (e.g. `+0.8`, `M3`), plus the principal line in
+  algebraic notation.
+- Buttons: **Nova** (new game), **Voltar** (undo), **Girar** (flip board),
+  **Dica** (show hint) and **Jogar dica** (play the best move).
+- Settings: adjustable analysis time, auto-arrow on/off, load/copy **FEN**.
 
-Precisa ser servido por HTTP (módulos ES + service worker não funcionam via `file://`):
+## Run locally
+
+It must be served over HTTP (ES modules and the service worker don't work from `file://`):
 
 ```bash
 cd ChessVision
 python3 -m http.server 8000
-# abra http://localhost:8000
+# open http://localhost:8000
 ```
 
-## Instalar no iPhone (adicionar à Tela de Início)
+## Install on iPhone (Add to Home Screen)
 
-1. Hospede a pasta em HTTPS (ex.: GitHub Pages, Netlify, Vercel).
-2. Abra o site no **Safari** do iPhone.
-3. Toque em **Compartilhar → Adicionar à Tela de Início**.
-4. O ícone aparece como app; abre em tela cheia e funciona offline.
+1. Host the folder over HTTPS (e.g. GitHub Pages, Netlify, Vercel).
+2. Open the site in **Safari** on the iPhone.
+3. Tap **Share → Add to Home Screen**.
+4. The icon shows up like an app; it opens full screen and works offline.
 
-> Observação: para um `.ipa` assinado instalável fora da App Store seria
-> necessário macOS + Xcode + conta de desenvolvedor Apple. Esta versão é um
-> PWA, que não exige nada disso e roda no iPhone pelo Safari.
+> Note: a signed `.ipa` installable outside the App Store requires macOS,
+> Xcode and an Apple developer account. This version is a PWA, which needs
+> none of that and runs on the iPhone through Safari.
 
-## Estrutura
+## Project structure
 
 ```
-index.html              interface
-styles.css              estilos (tema escuro, mobile-first)
-js/app.js               liga tabuleiro + motor + regras
-js/board.js             render do tabuleiro, interação e seta (SVG)
-js/engine.js            wrapper UCI do Stockfish (Web Worker)
-js/chess.js             chess.js (regras/validação de lances)
-engine/                 Stockfish 16 single-thread (WASM + rede NNUE)
-sw.js                   service worker (cache offline)
-manifest.webmanifest    metadados do PWA
-icons/                  ícones do app
+index.html              UI
+styles.css              styles (dark theme, mobile-first)
+js/app.js               wires board + engine + rules together
+js/board.js             board rendering, interaction and arrow (SVG)
+js/engine.js            Stockfish UCI wrapper (Web Worker)
+js/chess.js             chess.js (rules / move validation)
+engine/                 Stockfish 16 single-threaded (WASM + NNUE network)
+pieces/                 piece images (SVG)
+sw.js                   service worker (offline cache)
+manifest.webmanifest    PWA metadata
+icons/                  app icons
 ```
 
-## Créditos / Licenças
+## Credits / Licenses
 
-- Motor: [Stockfish](https://stockfishchess.org/) via
+- Engine: [Stockfish](https://stockfishchess.org/) via
   [stockfish.js](https://github.com/nmrugg/stockfish.js) — **GPLv3**
-  (ver `engine/STOCKFISH-LICENSE.txt`).
-- Peças: conjunto **Staunty**, por sadsnake1 (via [Lichess](https://github.com/lichess-org/lila)) —
-  [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) (uso não comercial).
-- Regras: [chess.js](https://github.com/jhlywa/chess.js) — BSD-2-Clause.
+  (see `engine/STOCKFISH-LICENSE.txt`).
+- Pieces: **Staunty** set by sadsnake1 (via [Lichess](https://github.com/lichess-org/lila)) —
+  [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) (non-commercial use).
+- Rules: [chess.js](https://github.com/jhlywa/chess.js) — BSD-2-Clause.
