@@ -160,6 +160,52 @@ async function analyze() {
 // Best move for the current position, reusing the last finished analysis.
 let lastBest = null;
 let playing = false;
+
+// Decide the move for the current position under accuracy mode. Cached per FEN
+// so the hint arrow and "Jogar dica" agree on the same move, and flashes a
+// visible note about what was chosen. Returns the chosen uci (or null).
+let accPick = null; // { fen, uci, best, candidates }
+async function decideAccuracyMove(announce) {
+  const fen = game.fen();
+  if (accPick && accPick.fen === fen) {
+    if (announce) flashAccuracy(accPick);
+    return accPick.uci;
+  }
+  setThinking(true);
+  const res = await engine.analyze(fen, { movetime: thinkMs, multipv: MULTIPV });
+  setThinking(false);
+  if (!res || game.fen() !== fen) return null;
+  const uci = chooseByAccuracy(res.candidates) || res.bestmove;
+  accPick = { fen, uci, best: res.bestmove, candidates: res.candidates || [] };
+  if (announce) flashAccuracy(accPick);
+  return uci;
+}
+
+function flashAccuracy(pick) {
+  const cands = pick.candidates || [];
+  if (cands.length <= 1) {
+    flash('Acurácia: só 1 lance candidato');
+  } else if (pick.uci === pick.best) {
+    flash('Acurácia: melhor lance');
+  } else {
+    const chosen = cands.find((c) => c.uci === pick.uci);
+    const loss = chosen ? (scoreVal(cands[0]) - scoreVal(chosen)) / 100 : 0;
+    flash('Acurácia: imprecisão proposital (-' + loss.toFixed(1) + ')');
+  }
+}
+
+// Show a hint arrow. In accuracy mode it points to the move the mode would
+// actually play (which may be a deliberate inaccuracy); otherwise the best move.
+async function showHint() {
+  if (game.isGameOver()) { analyze(); return; }
+  if (accuracyMode) {
+    const uci = await decideAccuracyMove(true);
+    if (uci && game.fen() === accPick.fen) drawMoveArrow(uci);
+  } else {
+    analyze();
+  }
+}
+
 async function playBest() {
   if (playing || game.isGameOver()) return;
   playing = true;
@@ -167,23 +213,8 @@ async function playBest() {
     const fen = game.fen();
     let uci;
     if (accuracyMode) {
-      // Separate multi-line search so we can choose a weaker move on purpose.
-      setThinking(true);
-      const res = await engine.analyze(fen, { movetime: thinkMs, multipv: MULTIPV });
-      setThinking(false);
-      if (!res || game.fen() !== fen) return;
-      uci = chooseByAccuracy(res.candidates) || res.bestmove;
-      // Visible confirmation that the mode is active and what it decided.
-      const cands = res.candidates || [];
-      if (cands.length <= 1) {
-        flash('Acurácia: só 1 lance candidato');
-      } else if (uci === res.bestmove) {
-        flash('Acurácia: melhor lance');
-      } else {
-        const chosen = cands.find((c) => c.uci === uci);
-        const loss = chosen ? (scoreVal(cands[0]) - scoreVal(chosen)) / 100 : 0;
-        flash('Acurácia: imprecisão proposital (-' + loss.toFixed(1) + ')');
-      }
+      uci = await decideAccuracyMove(true);
+      if (!uci || game.fen() !== fen) return;
     } else {
       uci = (lastBest && lastBest.fen === fen) ? lastBest.uci : await analyze();
     }
@@ -266,12 +297,13 @@ $('btn-undo').addEventListener('click', () => {
 
 $('btn-new').addEventListener('click', () => {
   game.reset();
+  accPick = null;
   board.setArrow(null, null);
   refresh(null);
   clearAnalysis('Mova uma pe\u00e7a para analisar');
 });
 
-$('btn-hint').addEventListener('click', () => analyze());
+$('btn-hint').addEventListener('click', () => showHint());
 $('btn-play').addEventListener('click', () => playBest());
 
 $('depth').addEventListener('input', (e) => {
@@ -321,7 +353,7 @@ function flash(msg) {
 }
 
 // ---- Boot ----
-const BUILD = 'build v10 · acurácia';
+const BUILD = 'build v11 · acurácia';
 $('build').textContent = BUILD;
 refresh(null);
 engine.ready.then(() => {
