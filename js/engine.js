@@ -18,6 +18,7 @@ export class Engine {
     // search an output line belongs to, even after several quick 'stop's.
     this._goCount = 0;
     this._bestCount = 0;
+    this._multipv = 1;
     this.on((line) => { if (line.startsWith('bestmove')) this._bestCount++; });
     this.ready = this._handshake();
   }
@@ -47,16 +48,30 @@ export class Engine {
     this.send('setoption name Skill Level value ' + lvl);
   }
 
-  // Analyze a FEN. onInfo(info) is called with {depth, scoreCp, mate, pv, bestSoFar}.
-  // Resolves with { bestmove, ponder, info } or null if superseded by a newer call.
-  async analyze(fen, { depth = 14, movetime = 0 } = {}, onInfo) {
+  // Set how many principal variations (candidate lines) the engine reports.
+  async setMultiPV(n) {
     await this.ready;
+    const v = Math.max(1, Math.min(16, n | 0));
+    if (v === this._multipv) return;
+    this._multipv = v;
+    this.send('setoption name MultiPV value ' + v);
+  }
+
+  // Analyze a FEN. onInfo(info) is called with {depth, scoreCp, mate, pv, bestSoFar}.
+  // Resolves with { bestmove, ponder, info, candidates } or null if superseded.
+  // candidates is an array (best first) of { uci, scoreCp, mate, pv }, one per
+  // MultiPV line, when multipv > 1 is requested.
+  async analyze(fen, { depth = 14, movetime = 0, multipv = 1 } = {}, onInfo) {
+    await this.ready;
+    await this.setMultiPV(multipv);
     const token = ++this._token;
     this.send('stop');
     const myGo = ++this._goCount;
 
     return new Promise((resolve) => {
       let last = { depth: 0, scoreCp: null, mate: null, pv: [] };
+      // Latest info line seen for each MultiPV rank (1 = best).
+      const byRank = new Map();
 
       const onLine = (line) => {
         const isBest = line.startsWith('bestmove');
@@ -72,15 +87,22 @@ export class Engine {
         if (line.startsWith('info') && line.includes(' pv ')) {
           const info = parseInfo(line);
           if (info) {
-            last = info;
-            if (onInfo) onInfo({ ...info, bestSoFar: info.pv[0] || null });
+            byRank.set(info.multipv || 1, info);
+            if ((info.multipv || 1) === 1) {
+              last = info;
+              if (onInfo) onInfo({ ...info, bestSoFar: info.pv[0] || null });
+            }
           }
         } else if (isBest) {
           this.listeners = this.listeners.filter((f) => f !== onLine);
           const parts = line.split(/\s+/);
           const bestmove = parts[1] && parts[1] !== '(none)' ? parts[1] : null;
           const ponder = parts[3] || null;
-          resolve({ bestmove, ponder, info: last });
+          const candidates = [...byRank.keys()].sort((a, b) => a - b)
+            .map((r) => byRank.get(r))
+            .filter((i) => i.pv && i.pv.length)
+            .map((i) => ({ uci: i.pv[0], scoreCp: i.scoreCp, mate: i.mate, pv: i.pv }));
+          resolve({ bestmove, ponder, info: last, candidates });
         }
       };
 
@@ -95,10 +117,11 @@ export class Engine {
 
 function parseInfo(line) {
   const toks = line.split(/\s+/);
-  const out = { depth: 0, scoreCp: null, mate: null, pv: [] };
+  const out = { depth: 0, scoreCp: null, mate: null, pv: [], multipv: 1 };
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i];
     if (t === 'depth') out.depth = parseInt(toks[i + 1], 10);
+    else if (t === 'multipv') out.multipv = parseInt(toks[i + 1], 10);
     else if (t === 'score') {
       const kind = toks[i + 1];
       const val = parseInt(toks[i + 2], 10);

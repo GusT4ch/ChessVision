@@ -17,6 +17,31 @@ const board = new BoardView($('board'), {
 let thinkMs = 1000; // time budget per analysis; keeps phones responsive
 let autoArrow = true;
 
+// Accuracy mode: when on, "Jogar dica" plays the best move only `accuracy`% of
+// the time; the rest of the time it plays a weaker candidate line instead.
+let accuracyMode = false;
+let accuracy = 70; // percent
+const MULTIPV = 5; // how many candidate lines to request from the engine
+
+// Pick a move from the engine's ranked candidates (best first) honouring the
+// accuracy setting. With probability `accuracy`% returns the best move; else a
+// weaker candidate, biased toward the stronger alternatives (fewer blunders).
+function chooseByAccuracy(candidates) {
+  if (!candidates || !candidates.length) return null;
+  if (candidates.length === 1) return candidates[0].uci;
+  if (Math.random() * 100 < accuracy) return candidates[0].uci;
+  const alts = candidates.slice(1);
+  // Weights 1/1, 1/2, 1/3, … so the 2nd-best is likeliest among the mistakes.
+  const weights = alts.map((_, i) => 1 / (i + 1));
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < alts.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return alts[i].uci;
+  }
+  return alts[alts.length - 1].uci;
+}
+
 function refresh(lastMove) {
   board.setPosition(game.board(), lastMove);
   updateStatus();
@@ -116,7 +141,17 @@ async function playBest() {
   playing = true;
   try {
     const fen = game.fen();
-    const uci = (lastBest && lastBest.fen === fen) ? lastBest.uci : await analyze();
+    let uci;
+    if (accuracyMode) {
+      // Separate multi-line search so we can choose a weaker move on purpose.
+      setThinking(true);
+      const res = await engine.analyze(fen, { movetime: thinkMs, multipv: MULTIPV });
+      setThinking(false);
+      if (!res || game.fen() !== fen) return;
+      uci = chooseByAccuracy(res.candidates) || res.bestmove;
+    } else {
+      uci = (lastBest && lastBest.fen === fen) ? lastBest.uci : await analyze();
+    }
     if (uci && game.fen() === fen) tryMove(uci.slice(0, 2), uci.slice(2, 4), uci[4]);
   } finally {
     playing = false;
@@ -212,6 +247,16 @@ $('depth').addEventListener('input', (e) => {
 $('auto').addEventListener('change', (e) => {
   autoArrow = e.target.checked;
   if (!autoArrow) board.setArrow(null, null);
+});
+
+$('accmode').addEventListener('change', (e) => {
+  accuracyMode = e.target.checked;
+  $('accrow').classList.toggle('off', !accuracyMode);
+});
+
+$('acc').addEventListener('input', (e) => {
+  accuracy = parseInt(e.target.value, 10);
+  $('accval').textContent = accuracy + '%';
 });
 
 $('btn-loadfen').addEventListener('click', () => {
