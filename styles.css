@@ -211,6 +211,7 @@ body {
 .opt input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
 .opt strong { color: var(--text); margin-left: 4px; }
 .opt.off { opacity: .4; pointer-events: none; }
+.build { margin: 10px 2px 0; font-size: 11px; color: var(--muted, #8a8f98); text-align: right; opacity: .7; }
 .fenrow { display: flex; gap: 8px; margin-top: 8px; }
 .btn {
   flex: 1; padding: 11px 8px; border-radius: 10px; cursor: pointer;

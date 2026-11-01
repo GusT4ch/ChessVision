@@ -173,6 +173,17 @@ async function playBest() {
       setThinking(false);
       if (!res || game.fen() !== fen) return;
       uci = chooseByAccuracy(res.candidates) || res.bestmove;
+      // Visible confirmation that the mode is active and what it decided.
+      const cands = res.candidates || [];
+      if (cands.length <= 1) {
+        flash('Acurácia: só 1 lance candidato');
+      } else if (uci === res.bestmove) {
+        flash('Acurácia: melhor lance');
+      } else {
+        const chosen = cands.find((c) => c.uci === uci);
+        const loss = chosen ? (scoreVal(cands[0]) - scoreVal(chosen)) / 100 : 0;
+        flash('Acurácia: imprecisão proposital (-' + loss.toFixed(1) + ')');
+      }
     } else {
       uci = (lastBest && lastBest.fen === fen) ? lastBest.uci : await analyze();
     }
@@ -310,6 +321,8 @@ function flash(msg) {
 }
 
 // ---- Boot ----
+const BUILD = 'build v10 · acurácia';
+$('build').textContent = BUILD;
 refresh(null);
 engine.ready.then(() => {
   $('enginestate').textContent = 'Motor pronto';
